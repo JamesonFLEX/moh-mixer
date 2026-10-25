@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://jamesonflex.github.io/Message-On-Hold/sitemap.xml
