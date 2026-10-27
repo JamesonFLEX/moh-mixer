@@ -114,7 +114,10 @@ input[type=range]{width:100%;accent-color:var(--blue-600);height:28px}
 .check input{width:18px;height:18px;accent-color:var(--blue-600)}
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mode{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:8px;cursor:pointer;background:#0C1424}
-.mode:has(input:checked){border-color:var(--blue-600);background:var(--blue-100)}
+.mode{cursor:default}
+.mode.edit{border-color:var(--blue-600);background:var(--blue-100)}
+.mode .lbl{font-weight:600;font-size:14px}
+.lenbox{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;color:#fff;letter-spacing:.02em;line-height:32px}
 .mode .t{display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px}
 .mode input[type=radio]{accent-color:var(--blue-600);width:16px;height:16px}
 .mmss{display:flex;align-items:center;gap:4px;font-family:var(--f-mono)}
@@ -219,7 +222,7 @@ input[type=range]{width:100%;accent-color:var(--blue-600);height:28px}
       <button class="btn amber big" id="pExport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export MP3</button>
     </div>
     <div class="bar" aria-hidden="true"><i id="pbar"></i></div>
-    <p class="status" id="status" role="status">Demo tracks loaded. Add your own music and messages to replace them.</p>
+    <p class="status" id="status" role="status">Add music and messages to start. Play time builds automatically.</p>
     <input type="file" id="projFile" accept=".json,application/json" hidden>
   </section>
 
@@ -240,12 +243,12 @@ input[type=range]{width:100%;accent-color:var(--blue-600);height:28px}
     <div class="ctl">
       <div class="ctl-h"><span class="l">Project time control</span></div>
       <div class="modes">
-        <label class="mode"><span class="t"><input type="radio" name="mode" value="interval" checked> Msg interval</span>
+        <label class="mode edit"><span class="lbl">Msg interval</span>
           <span class="mmss"><input type="number" id="ivM" min="0" max="59" value="0" aria-label="Interval minutes">:<input type="number" id="ivS" min="0" max="59" value="5" aria-label="Interval seconds"></span></label>
-        <label class="mode"><span class="t"><input type="radio" name="mode" value="playtime"> Play time</span>
-          <span class="mmss"><input type="number" id="ptM" min="0" max="99" value="3" aria-label="Play time minutes">:<input type="number" id="ptS" min="0" max="59" value="0" aria-label="Play time seconds"></span></label>
+        <div class="mode"><span class="lbl">Play time</span>
+          <output class="lenbox" id="playLen" aria-live="polite">00:00</output></div>
       </div>
-      <p class="hint" id="modeHint">Music between each message. Every message plays once.</p>
+      <p class="hint" id="modeHint">Play time is set automatically from your files: one interval, then each message followed by one interval.</p>
     </div>
     <div class="ctl">
       <div class="ctl-h"><span class="l">Dealer security code / time stamp</span></div>
@@ -284,22 +287,7 @@ function status(t){$('status').textContent=t}
 function ac(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();out=AC.createGain();out.connect(AC.destination);applyVol()}if(AC.state==='suspended')AC.resume();return AC}
 function applyVol(){if(out)out.gain.value=$('mute').checked?0:$('vol').value/100}
 const num=(id,max)=>Math.min(max,Math.max(0,parseInt($(id).value)||0));
-function settings(){return{mode:document.querySelector('input[name=mode]:checked').value,iv:num('ivM',59)*60+num('ivS',59),pt:num('ptM',99)*60+num('ptS',59),duck:$('duck').value/100,loopFade:$('loopFade').checked}}
-
-/* ---------- demo audio (synth) ---------- */
-async function synthPad(){
-  const dur=24,c=new OfflineAudioContext(2,SR*dur,SR),m=c.createGain();m.gain.value=.16;m.connect(c.destination);
-  const chords=[[57,60,64,69],[53,57,60,65],[48,52,55,60],[55,59,62,67]];
-  chords.forEach((ch,i)=>{const t=i*6;ch.forEach((n,j)=>{const o=c.createOscillator(),g=c.createGain(),p=c.createStereoPanner();o.type=j%2?'triangle':'sine';o.frequency.value=440*2**((n-69)/12);p.pan.value=(j-1.5)/2.5;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.9,t+1.2);g.gain.setValueAtTime(.9,t+5);g.gain.linearRampToValueAtTime(0,t+6.4);o.connect(g).connect(p).connect(m);o.start(t);o.stop(Math.min(dur,t+6.5))});
-    [0,1.5,3,4.5].forEach((d,k)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=440*2**((ch[k%4]+12-69)/12);g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.35,t+d+.02);g.gain.exponentialRampToValueAtTime(.001,t+d+1.4);o.connect(g).connect(m);o.start(t+d);o.stop(t+d+1.5)})});
-  return c.startRendering();
-}
-async function synthChime(seed){
-  const dur=4.5,c=new OfflineAudioContext(2,SR*dur,SR),m=c.createGain();m.gain.value=.5;m.connect(c.destination);
-  const seq=seed?[76,79,84,79]:[72,76,79,84];
-  seq.forEach((n,i)=>{const t=.3+i*.55,o=c.createOscillator(),o2=c.createOscillator(),g=c.createGain();o.frequency.value=440*2**((n-69)/12);o2.frequency.value=o.frequency.value*2.01;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.6,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+1.8);o.connect(g);o2.connect(g);g.connect(m);o.start(t);o2.start(t);o.stop(t+1.9);o2.stop(t+1.9)});
-  return c.startRendering();
-}
+function settings(){return{iv:num('ivM',59)*60+num('ivS',59),duck:$('duck').value/100,loopFade:$('loopFade').checked}}
 
 /* ---------- lists ---------- */
 function renderList(kind){
@@ -358,26 +346,21 @@ function previewTrack(kind,btn){const was=preview&&preview.btn===btn;stopPreview
 /* ---------- program plan ---------- */
 function plan(){
   const st=settings(),M=S.music,G=S.msgs,hasM=M.length>0;
-  const lead=hasM?4:.5,tail=hasM?4:.5;let events=[],total=0;
-  if(!M.length&&!G.length)return{total:0,events,segs:[],windows:[],st};
-  if(st.mode==='interval'||!st.pt){
-    let t=lead;G.forEach(m=>{events.push({tr:m,start:t,dur:m.buf.duration});t+=m.buf.duration+st.iv});
-    total=G.length?t-st.iv+tail:M.reduce((a,x)=>a+x.buf.duration,0);
-  }else{
-    total=st.pt;const n=G.length,sum=G.reduce((a,m)=>a+m.buf.duration,0);
-    let gap=n>1?(total-lead-tail-sum)/(n-1):0;if(n>1&&gap<.5){gap=.5;total=lead+sum+gap*(n-1)+tail}
-    if(n===1&&total<lead+sum+tail)total=lead+sum+tail;
-    let t=n===1?(total-sum)/2:lead;G.forEach(m=>{events.push({tr:m,start:t,dur:m.buf.duration});t+=m.buf.duration+gap});
-  }
+  let events=[],total=0;
+  if(!M.length&&!G.length)return{total:0,events,segs:[],windows:[],st,fin:0,fout:0};
+  // Fixed layout: interval, msg 1, interval, msg 2, ... msg N, interval. Interval never stretches.
+  if(G.length){let t=st.iv;G.forEach(m=>{events.push({tr:m,start:t,dur:m.buf.duration});t+=m.buf.duration+st.iv});total=t}
+  else total=M.reduce((a,x)=>a+x.buf.duration,0);
+  const edge=G.length?st.iv:total/4,fin=hasM?Math.min(1,edge):0,fout=hasM?Math.min(3,edge):0;
   const segs=[];if(hasM){let t=0,i=0,g=0;while(t<total-.05&&g++<5000){const tr=M[i%M.length],d=Math.min(tr.buf.duration,total-t),xf=st.loopFade&&tr.buf.duration>XF*3?XF:0;segs.push({tr,start:t,dur:d,xf});t+=d-(d===tr.buf.duration?xf:0);i++}}
   const windows=[];events.forEach(e=>{const l=windows[windows.length-1];if(l&&e.start-RAMP<=l.end+RAMP)l.end=e.start+e.dur;else windows.push({start:e.start,end:e.start+e.dur})});
-  return{total,events,segs,windows,st};
+  return{total,events,segs,windows,st,fin,fout};
 }
 async function render(P){
   const len=Math.ceil(P.total*SR),c=new OfflineAudioContext(2,len,SR),master=c.createGain(),bus=c.createGain();
   master.connect(c.destination);bus.connect(master);
-  master.gain.setValueAtTime(0,0);master.gain.linearRampToValueAtTime(1,Math.min(1,P.total/4));
-  master.gain.setValueAtTime(1,Math.max(.01,P.total-3));master.gain.linearRampToValueAtTime(0,P.total);
+  master.gain.setValueAtTime(P.fin?0:1,0);if(P.fin)master.gain.linearRampToValueAtTime(1,P.fin);
+  if(P.fout){master.gain.setValueAtTime(1,P.total-P.fout);master.gain.linearRampToValueAtTime(0,P.total)}
   P.segs.forEach((s,k)=>{const src=c.createBufferSource(),g=c.createGain();src.buffer=s.tr.buf;src.connect(g).connect(bus);
     if(s.xf){if(k>0){g.gain.setValueAtTime(0,s.start);g.gain.linearRampToValueAtTime(1,s.start+s.xf)}else g.gain.setValueAtTime(1,s.start);
       if(s.dur===s.tr.buf.duration){g.gain.setValueAtTime(1,s.start+s.dur-s.xf);g.gain.linearRampToValueAtTime(0,s.start+s.dur)}}
@@ -414,7 +397,8 @@ function draw(head){
 }
 function update(){const P=plan();$('projLen').textContent=fmt(P.total);
   $('tlInfo').textContent=P.total?fmt(P.total)+' · '+P.events.length+' message'+(P.events.length===1?'':'s')+' · '+P.segs.length+' music pass'+(P.segs.length===1?'':'es'):'';
-  const st=P.st;$('modeHint').textContent=st.mode==='interval'?'Music plays '+fmt(st.iv)+' between each message. Every message plays once.':(st.pt?'Program runs '+fmt(st.pt)+' with messages spaced evenly'+(P.total>st.pt+.5?' (extended to '+fmt(P.total)+' to fit every message).':'.'):'Set a play time above zero.');
+  const st=P.st,n=P.events.length,mm=Math.round(P.total);$('playLen').textContent=String(Math.floor(mm/60)).padStart(2,'0')+':'+String(mm%60).padStart(2,'0');
+  $('modeHint').textContent=n?(n+1)+' intervals of '+fmt(st.iv)+' + '+n+' message'+(n===1?'':'s')+' ('+fmt(P.events.reduce((a,e)=>a+e.dur,0))+'). Interval stays fixed; play time grows as you add files.':(S.music.length?'No messages yet: play time is your music length.':'Play time is set automatically from your files: one interval, then each message followed by one interval.');
   if(!projPlay)draw()}
 
 /* ---------- project play ---------- */
@@ -495,8 +479,8 @@ async function openProject(f){
   try{stopPreview();const j=JSON.parse(await f.text());if(j.app!=='MOH Mixer')throw new Error('That file isn’t a MOH Mixer project.');
     const c=ac(),load=async a=>Promise.all((a||[]).map(async t=>{const ab=unb64(t.data);return{id:uid++,name:t.name,demo:t.demo,src:t.demo?null:ab,mime:t.mime,buf:await c.decodeAudioData(ab.slice(0))}}));
     S.music=await load(j.music);S.msgs=await load(j.messages);S.sel={music:0,msgs:0};$('pname').value=j.name||'Untitled hold program';
-    const s=j.settings||{};document.querySelector('input[name=mode][value='+(s.mode==='playtime'?'playtime':'interval')+']').checked=true;
-    $('ivM').value=Math.floor((s.iv??5)/60);$('ivS').value=(s.iv??5)%60;$('ptM').value=Math.floor((s.pt??180)/60);$('ptS').value=(s.pt??180)%60;
+    const s=j.settings||{};
+    $('ivM').value=Math.floor((s.iv??5)/60);$('ivS').value=(s.iv??5)%60;
     $('duck').value=Math.round((s.duck??.25)*100);$('loopFade').checked=s.loopFade!==false;$('vol').value=s.volume??90;syncOuts();
     renderList('music');renderList('msgs');status('Opened '+f.name)}
   catch(e){toast(e.message||'Couldn’t open that file.')}
@@ -514,15 +498,10 @@ $('pPlay').onclick=playProject;$('pExport').onclick=exportMp3;$('pSave').onclick
 $('pOpen').onclick=()=>$('projFile').click();$('projFile').onchange=e=>{if(e.target.files[0])openProject(e.target.files[0]);e.target.value=''};
 $('addCode').onchange=()=>{$('codeVal').hidden=!$('addCode').checked;if($('addCode').checked)$('codeVal').focus()};
 ['vol','mute','duck'].forEach(id=>$(id).addEventListener('input',()=>{syncOuts();update()}));
-['loopFade','ivM','ivS','ptM','ptS'].forEach(id=>$(id).addEventListener('input',update));
-document.querySelectorAll('input[name=mode]').forEach(r=>r.addEventListener('change',update));
+['loopFade','ivM','ivS'].forEach(id=>$(id).addEventListener('input',update));
 addEventListener('resize',()=>{if(!projPlay)draw()});
 
-(async()=>{renderList('music');renderList('msgs');
-  try{const [pad,c1,c2]=await Promise.all([synthPad(),synthChime(0),synthChime(1)]);
-    S.music=[{id:uid++,name:'Soft Pad Bed',buf:pad,demo:true}];
-    S.msgs=[{id:uid++,name:'Chime A (stand-in for a message)',buf:c1,demo:true},{id:uid++,name:'Chime B (stand-in for a message)',buf:c2,demo:true}];
-    renderList('music');renderList('msgs')}catch(e){status('Add music and messages to start.')}})();
+renderList('music');renderList('msgs');
 })();
 /* ---------- installable app ---------- */
 (()=>{

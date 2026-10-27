@@ -1,5 +1,5 @@
 // MOH Mixer service worker: makes the app installable and lets it open offline.
-const CACHE = 'moh-mixer-v2';
+const CACHE = 'moh-mixer-v3';
 const CORE = [
   './',
   './index.html',
