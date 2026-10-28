@@ -278,7 +278,7 @@ input[type=range]{width:100%;accent-color:var(--blue-600);height:28px}
         <div class="seg" role="radiogroup" aria-label="Channels"><label><input type="radio" name="xch" value="1" checked><span>Mono</span></label><label><input type="radio" name="xch" value="2"><span>Stereo</span></label></div></div>
       <div class="fmt-row"><span>Sample rate</span>
         <div class="seg" role="radiogroup" aria-label="Sample rate"><label><input type="radio" name="xsr" value="44100" checked><span>44.1k</span></label><label><input type="radio" name="xsr" value="22050"><span>22k</span></label><label><input type="radio" name="xsr" value="16000"><span>16k</span></label><label><input type="radio" name="xsr" value="8000"><span>8k</span></label></div></div>
-      <p class="hint">Mono is what phone systems expect. Use 8k WAV if your phone system asks for telephone-quality files.</p>
+      <p class="hint">Mono is what phone systems expect. Use 8k WAV if your phone system asks for telephone-quality files. Every export gets a clean-up pass: click-free edges, rumble filter, peak limiter, anti-alias filter and dither.</p>
     </div>
   </section>
 
@@ -389,20 +389,25 @@ function plan(){
   const windows=[];events.forEach(e=>{const l=windows[windows.length-1];if(l&&e.start-RAMP<=l.end+RAMP)l.end=e.start+e.dur;else windows.push({start:e.start,end:e.start+e.dur})});
   return{total,events,segs,windows,st,fin,fout};
 }
-function makeCtx(ch,len,rate){try{return new OfflineAudioContext(ch,len,rate)}catch(e){return null}}
 async function render(P,rate=SR,ch=2){
-  let c=makeCtx(ch,Math.ceil(P.total*rate),rate);
-  if(!c){const hi=await render(P,SR,ch);return resample(hi,rate)}
+  // Always mix at full 44.1 kHz stereo. Lower rates/mono are made afterwards by cleanOut(),
+  // because the browser's own low-rate rendering skips anti-alias filtering (that caused the scratch).
+  const c=new OfflineAudioContext(2,Math.ceil(P.total*SR),SR);
   const master=c.createGain(),bus=c.createGain();
   master.connect(c.destination);bus.connect(master);
   master.gain.setValueAtTime(P.fin?0:1,0);if(P.fin)master.gain.linearRampToValueAtTime(1,P.fin);
   if(P.fout){master.gain.setValueAtTime(1,P.total-P.fout);master.gain.linearRampToValueAtTime(0,P.total)}
   P.segs.forEach((s,k)=>{const src=c.createBufferSource(),g=c.createGain();src.buffer=s.tr.buf;src.connect(g).connect(bus);
-    if(s.xf){if(k>0){g.gain.setValueAtTime(0,s.start);g.gain.linearRampToValueAtTime(1,s.start+s.xf)}else g.gain.setValueAtTime(1,s.start);
-      if(s.dur===s.tr.buf.duration){g.gain.setValueAtTime(1,s.start+s.dur-s.xf);g.gain.linearRampToValueAtTime(0,s.start+s.dur)}}
+    const xi=s.xf&&k>0?s.xf:(k>0?.01:0),xo=s.xf&&s.dur===s.tr.buf.duration?s.xf:.01;
+    if(xi){g.gain.setValueAtTime(0,s.start);g.gain.linearRampToValueAtTime(1,s.start+xi)}else g.gain.setValueAtTime(1,s.start);
+    g.gain.setValueAtTime(1,s.start+s.dur-xo);g.gain.linearRampToValueAtTime(0,s.start+s.dur);
     src.start(s.start,0,s.dur)});
   bus.gain.setValueAtTime(1,0);P.windows.forEach(w=>{bus.gain.setValueAtTime(1,Math.max(0,w.start-RAMP));bus.gain.linearRampToValueAtTime(P.st.duck,w.start);bus.gain.setValueAtTime(P.st.duck,w.end);bus.gain.linearRampToValueAtTime(1,w.end+RAMP)});
-  P.events.forEach(e=>{const src=c.createBufferSource();src.buffer=e.tr.buf;src.connect(master);src.start(e.start)});
+  // Micro-fades on every message edge: no clicks when a recording starts or stops mid-noise.
+  P.events.forEach(e=>{const src=c.createBufferSource(),g=c.createGain(),d=e.tr.buf.duration,fi=Math.min(.008,d/4),fo=Math.min(.03,d/4);
+    src.buffer=e.tr.buf;src.connect(g).connect(master);
+    g.gain.setValueAtTime(0,e.start);g.gain.linearRampToValueAtTime(1,e.start+fi);g.gain.setValueAtTime(1,e.start+d-fo);g.gain.linearRampToValueAtTime(0,e.start+d);
+    src.start(e.start)});
   return c.startRendering();
 }
 
@@ -448,17 +453,49 @@ async function playProject(){
 
 /* ---------- MP3 + ID3 ---------- */
 const yieldUI=()=>new Promise(r=>setTimeout(r,0));
-// Box-filter + linear resampler, only used when the browser can't render at the target rate directly.
-function resample(buf,rate){const ratio=buf.sampleRate/rate,n=Math.floor(buf.length/ratio),out={sampleRate:rate,length:n,numberOfChannels:buf.numberOfChannels,ch:[],getChannelData(i){return this.ch[i]}};
-  const w=Math.max(1,Math.round(ratio));for(let c=0;c<buf.numberOfChannels;c++){const s=buf.getChannelData(c),d=new Float32Array(n);
-    for(let i=0;i<n;i++){const p=i*ratio,a=Math.floor(p);let acc=0,k=0;for(let j=a-(w>>1);j<=a+(w>>1);j++)if(j>=0&&j<s.length){acc+=s[j];k++}d[i]=k?acc/k:0}out.ch.push(d)}return out}
+/* ---------- export clean-up chain (podcast-style mastering) ---------- */
+// 1) rumble/DC high-pass  2) look-ahead peak limiter + normalize to -1 dBFS
+// 3) windowed-sinc anti-alias resampler  4) TPDF dither at 16-bit (in toI / wav)
+function highpass(x,rate,f){const w=2*Math.PI*f/rate,cs=Math.cos(w),al=Math.sin(w)/(2*Math.SQRT1_2),a0=1+al,
+  b0=(1+cs)/2/a0,b1=-(1+cs)/a0,b2=b0,a1=-2*cs/a0,a2=(1-al)/a0;let x1=0,x2=0,y1=0,y2=0;
+  for(let i=0;i<x.length;i++){const v=x[i],y=b0*v+b1*x1+b2*x2-a1*y1-a2*y2;x2=x1;x1=v;y2=y1;y1=y;x[i]=y}}
+function limiter(chs,rate,ceil){const n=chs[0].length,la=Math.max(1,Math.round(rate*.005)),need=new Float32Array(n);
+  for(let i=0;i<n;i++){let p=0;for(const c of chs){const a=Math.abs(c[i]);if(a>p)p=a}need[i]=p>ceil?ceil/p:1}
+  // sliding minimum over the next `la` samples (monotonic deque, O(n))
+  const m=new Float32Array(n),q=new Int32Array(n);let h=0,t=0;
+  for(let i=n-1;i>=0;i--){while(t>h&&need[q[t-1]]>=need[i])t--;q[t++]=i;while(q[h]>i+la)h++;m[i]=need[q[h]]}
+  const atk=1-Math.exp(-4/la),rel=Math.exp(-1/(rate*.12));let g=1;
+  for(let i=0;i<n;i++){const tg=m[i];g=tg<g?g+(tg-g)*atk:tg+(g-tg)*rel;if(g>need[i])g=need[i];for(const c of chs)c[i]*=g}}
+async function sincResample(x,inR,outR){
+  if(inR===outR)return x;
+  const ratio=inR/outR,n=Math.floor(x.length/ratio),fc=0.45*outR/inR,L=Math.ceil(16/(2*fc)),RES=128,tab=new Float32Array(L*RES+2);
+  for(let k=0;k<tab.length;k++){const d=k/RES;if(d>=L){tab[k]=0;continue}const a=Math.PI*2*fc*d,s=d===0?1:Math.sin(a)/a;
+    tab[k]=s*(0.42+0.5*Math.cos(Math.PI*d/L)+0.08*Math.cos(2*Math.PI*d/L))}
+  const y=new Float32Array(n);
+  for(let i=0;i<n;i++){const p=i*ratio,j0=Math.ceil(p-L),j1=Math.floor(p+L);let acc=0,ws=0;
+    for(let j=j0;j<=j1;j++){const d=Math.abs(p-j)*RES,k=d|0,hv=tab[k]+(tab[k+1]-tab[k])*(d-k);ws+=hv;if(j>=0&&j<x.length)acc+=x[j]*hv}
+    y[i]=ws?acc/ws:0;
+    if(i%40000===0){$('pbar').style.width=(i/n*100)+'%';await yieldUI()}}
+  return y}
+async function cleanOut(buf,rate,ch){
+  status('Cleaning up audio…');await yieldUI();
+  const inR=buf.sampleRate;let chs=[buf.getChannelData(0).slice(),buf.getChannelData(1).slice()];
+  if(ch===1){const m=new Float32Array(chs[0].length);for(let i=0;i<m.length;i++)m[i]=(chs[0][i]+chs[1][i])*.5;chs=[m]}
+  chs.forEach(c=>highpass(c,inR,rate<=16000?100:30));
+  const out=[];for(const c of chs){if(rate!==inR)status('Converting to '+(rate/1000)+' kHz…');out.push(await sincResample(c,inR,rate))}
+  // Limit + normalize AFTER band-limiting, so the level is set on what's actually in the file.
+  const CEIL=0.89;limiter(out,rate,CEIL);
+  let pk=0;out.forEach(c=>{for(let i=0;i<c.length;i++){const a=Math.abs(c[i]);if(a>pk)pk=a}});
+  if(pk>1e-4&&pk<CEIL){const g=CEIL/pk;out.forEach(c=>{for(let i=0;i<c.length;i++)c[i]*=g})}
+  return{sampleRate:rate,length:out[0].length,numberOfChannels:out.length,getChannelData:i=>out[i]}}
+const dith=s=>{s+=(Math.random()-Math.random())/32768;s=s>1?1:s<-1?-1:s;return s<0?Math.round(s*32768):Math.round(s*32767)};
 function mp3Kbps(rate,ch){return({44100:[96,128],22050:[64,96],16000:[48,64],8000:[24,32]})[rate][ch-1]}
 async function encodeMp3(buf){
   if(!window.lamejs)throw new Error('MP3 encoder didn’t load. Check your connection and reload.');
   const ch=buf.numberOfChannels,rate=buf.sampleRate,enc=new lamejs.Mp3Encoder(ch,rate,mp3Kbps(rate,ch)),N=1152,parts=[];
   // Pad the tail with silence so the encoder's final partial frame can never clip real audio.
   const pad=N*3,src=[...Array(ch)].map((_,c)=>{const s=buf.getChannelData(c),o=new Float32Array(s.length+pad);o.set(s);return o}),L=src[0],R=src[ch-1];
-  const toI=(f,a,b)=>{const o=new Int16Array(b-a);for(let i=a;i<b;i++){const s=Math.max(-1,Math.min(1,f[i]));o[i-a]=s<0?s*32768:s*32767}return o};
+  const toI=(f,a,b)=>{const o=new Int16Array(b-a);for(let i=a;i<b;i++)o[i-a]=dith(f[i]);return o};
   for(let i=0;i<L.length;i+=N){const e=Math.min(L.length,i+N);const d=ch===1?enc.encodeBuffer(toI(L,i,e)):enc.encodeBuffer(toI(L,i,e),toI(R,i,e));if(d.length)parts.push(new Uint8Array(d));
     if((i/N)%300===0){$('pbar').style.width=(i/L.length*100)+'%';status('Encoding MP3… '+Math.round(i/L.length*100)+'%');await yieldUI()}}
   const f=enc.flush();if(f.length)parts.push(new Uint8Array(f));return cat(parts);
@@ -528,7 +565,7 @@ async function exportMp3(){
   let info;try{info=tagInfo($('pname').value.trim())}catch(e){return toast(e.message)}
   const target=await pickTarget(name);if(target==='cancel')return status('Export cancelled.');
   btn.disabled=true;
-  try{status('Mixing…');const buf=await render(P,o.rate,o.ch);let bytes;
+  try{status('Mixing…');const buf=await cleanOut(await render(P),o.rate,o.ch);let bytes;
     if(o.fmt==='wav')bytes=new Uint8Array(wav(buf));
     else{bytes=await encodeMp3(buf);if(info.code||info.stamp||info.title)bytes=cat([id3(info),bytes])}
     $('pbar').style.width='100%';
@@ -540,7 +577,7 @@ async function exportMp3(){
 /* ---------- project files ---------- */
 function wav(buf){const ch=buf.numberOfChannels,n=buf.length,b=new DataView(new ArrayBuffer(44+n*ch*2)),w=(o,s)=>[...s].forEach((c,i)=>b.setUint8(o+i,c.charCodeAt(0)));
   w(0,'RIFF');b.setUint32(4,36+n*ch*2,true);w(8,'WAVEfmt ');b.setUint32(16,16,true);b.setUint16(20,1,true);b.setUint16(22,ch,true);b.setUint32(24,buf.sampleRate,true);b.setUint32(28,buf.sampleRate*ch*2,true);b.setUint16(32,ch*2,true);b.setUint16(34,16,true);w(36,'data');b.setUint32(40,n*ch*2,true);
-  const d=[...Array(ch)].map((_,c)=>buf.getChannelData(c));let o=44;for(let i=0;i<n;i++)for(let c=0;c<ch;c++){const s=Math.max(-1,Math.min(1,d[c][i]));b.setInt16(o,s<0?s*32768:s*32767,true);o+=2}return b.buffer}
+  const d=[...Array(ch)].map((_,c)=>buf.getChannelData(c));let o=44;for(let i=0;i<n;i++)for(let c=0;c<ch;c++){b.setInt16(o,dith(d[c][i]),true);o+=2}return b.buffer}
 function b64(ab){const u=new Uint8Array(ab);let s='';for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)}
 function unb64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u.buffer}
 async function saveProject(){
