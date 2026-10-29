@@ -151,6 +151,33 @@ input[type=range]{width:100%;accent-color:var(--blue-600);height:28px}
 .sheet .meta{font-family:var(--f-mono);font-size:12.5px;color:#A9B8D6;word-break:break-all}
 .sheet .acts{display:flex;gap:8px;flex-wrap:wrap}
 .sheet .acts .btn{flex:1 1 auto}
+.top-actions{margin-left:auto;align-self:flex-start;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.top-actions .install{margin-left:0}
+.pill{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;font-weight:600;cursor:pointer;backdrop-filter:blur(6px)}
+.pill:hover{background:rgba(255,255,255,.2)}.pill svg{width:17px;height:17px}
+.pill .count{font-family:var(--f-mono);font-size:12px;background:rgba(0,0,0,.3);border-radius:999px;padding:1px 7px}
+.qx{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn.qx-b{flex-direction:column;gap:2px;line-height:1.1}
+.btn.qx-b small{font-family:var(--f-mono);font-size:11px;font-weight:500;opacity:.85}
+.btn.wide{width:100%;margin-top:8px}
+.ivbox .cd{font-family:var(--f-display);font-style:italic;font-weight:800;font-size:44px;line-height:32px;color:#FFC04A;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.ivbox.live{border-color:#F2A31B;background:#2E2108}
+.ivbox.live.msg .cd{color:#fff;font-size:26px}
+.cd-chip{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:6px 12px;border-radius:999px;background:#2E2108;border:1px solid #8A6215;color:#FFD27A;font-weight:600;font-size:14px}
+.cd-chip b{font-family:var(--f-mono);font-size:16px;color:#fff;font-variant-numeric:tabular-nums}
+.modal{position:fixed;inset:0;background:rgba(3,8,20,.66);z-index:8;display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.panel{width:min(560px,100%);max-height:min(640px,100%);display:flex;flex-direction:column;background:var(--panel);border:1px solid #33456E;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.panel-h h3{margin:0;font-size:16px}
+.panel-b{padding:14px 16px;overflow:auto;display:grid;gap:12px}
+.save-row{display:flex;gap:8px}.save-row input{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:#0C1424}
+.presets{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.preset{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#0C1424}
+.preset .pn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preset .pm{font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-top:2px}
+.preset .pa{display:flex;gap:6px}.preset .btn{min-height:36px;padding:0 12px}
+.preset.cur{border-color:var(--blue-600)}
+.empty-p{color:var(--muted);text-align:center;padding:22px 8px;border:1px dashed var(--line);border-radius:12px}
 .toast{position:fixed;border:1px solid var(--line);left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1E2B48;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
 @media (prefers-reduced-motion:reduce){.hero.playing .eq i{animation:none;height:70%}.btn{transition:none}}
 </style>
@@ -184,10 +211,13 @@ input[type=range]{width:100%;accent-color:var(--blue-600);height:28px}
     </svg>
     <div class="brand">
       <h1 class="wordmark">MOH <span>Mixer</span></h1>
-      <p class="tag">Music-on-hold builder. Drop in a music bed and your messages, set the spacing, and export a ready-to-load MP3.</p>
+      <p class="tag">Music-on-hold builder. Drop in a music bed and your messages, set the spacing, and export a phone-ready audio file.</p>
       <div class="eq" aria-hidden="true"><i style="animation-delay:0s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.45s"></i><i style="animation-delay:.1s"></i><i style="animation-delay:.6s"></i><i style="animation-delay:.3s"></i><i style="animation-delay:.75s"></i><i style="animation-delay:.15s"></i></div>
     </div>
+    <div class="top-actions">
+    <button class="pill" id="presetsBtn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M4 12h16M4 18h8"/><circle cx="17" cy="6" r="2.5"/><circle cx="15" cy="18" r="2.5"/></svg>Saved settings <span class="count" id="presetCount">0</span></button>
     <button class="install" id="installBtn" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Install app</button>
+    </div>
   </div>
   <svg class="wave" viewBox="0 0 1440 42" preserveAspectRatio="none" aria-hidden="true">
     <path d="M0 26 C180 6 360 6 540 22 C720 38 900 40 1080 24 C1260 8 1350 12 1440 20 L1440 42 L0 42 Z" fill="#080E1C"/>
@@ -232,9 +262,11 @@ input[type=range]{width:100%;accent-color:var(--blue-600);height:28px}
     </div>
     <div class="pgrid2">
       <button class="btn primary big" id="pPlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>Play Project</span></button>
-      <button class="btn amber big" id="pExport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span id="pExportLbl">Export MP3</span></button>
+      <button class="btn amber big qx-b" id="pQuick" title="One-click export: WAV, 16 kHz, mono, 16-bit"><span>One-Click Export</span><small>WAV · 16k · mono</small></button>
     </div>
+    <button class="btn wide" id="pExport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span id="pExportLbl">Export as…</span></button>
     <div class="bar" aria-hidden="true"><i id="pbar"></i></div>
+    <div class="cd-chip" id="cdChip" hidden aria-live="off"><span id="cdChipLbl">Next message in</span> <b id="cdChipVal">5</b></div>
     <p class="status" id="status" role="status">Add music and messages to start. Play time builds automatically.</p>
     <input type="file" id="projFile" accept=".json,application/json" hidden>
   </section>
@@ -256,8 +288,9 @@ input[type=range]{width:100%;accent-color:var(--blue-600);height:28px}
     <div class="ctl">
       <div class="ctl-h"><span class="l">Project time control</span></div>
       <div class="modes">
-        <label class="mode edit"><span class="lbl">Msg interval</span>
-          <span class="mmss"><input type="number" id="ivM" min="0" max="59" value="0" aria-label="Interval minutes">:<input type="number" id="ivS" min="0" max="59" value="5" aria-label="Interval seconds"></span></label>
+        <label class="mode edit ivbox" id="ivBox"><span class="lbl" id="ivLbl">Msg interval</span>
+          <output class="cd" id="ivCd" hidden>5</output>
+          <span class="mmss" id="ivInputs"><input type="number" id="ivM" min="0" max="59" value="0" aria-label="Interval minutes">:<input type="number" id="ivS" min="0" max="59" value="5" aria-label="Interval seconds"></span></label>
         <div class="mode"><span class="lbl">Play time</span>
           <output class="lenbox" id="playLen" aria-live="polite">00:00</output></div>
       </div>
@@ -271,14 +304,14 @@ input[type=range]{width:100%;accent-color:var(--blue-600);height:28px}
       <p class="hint">Written into the MP3's ID3 tags, so you can prove which file a client is playing.</p>
     </div>
     <div class="ctl">
-      <div class="ctl-h"><span class="l">Export format</span><output id="fmtOut"></output></div>
+      <div class="ctl-h"><span class="l">Export as… format</span><output id="fmtOut"></output></div>
       <div class="fmt-row"><span>File type</span>
-        <div class="seg" role="radiogroup" aria-label="File type"><label><input type="radio" name="xfmt" value="mp3" checked><span>MP3</span></label><label><input type="radio" name="xfmt" value="wav"><span>WAV</span></label></div></div>
+        <div class="seg" role="radiogroup" aria-label="File type"><label><input type="radio" name="xfmt" value="wav" checked><span>WAV</span></label><label><input type="radio" name="xfmt" value="mp3"><span>MP3</span></label></div></div>
       <div class="fmt-row"><span>Channels</span>
         <div class="seg" role="radiogroup" aria-label="Channels"><label><input type="radio" name="xch" value="1" checked><span>Mono</span></label><label><input type="radio" name="xch" value="2"><span>Stereo</span></label></div></div>
       <div class="fmt-row"><span>Sample rate</span>
-        <div class="seg" role="radiogroup" aria-label="Sample rate"><label><input type="radio" name="xsr" value="44100" checked><span>44.1k</span></label><label><input type="radio" name="xsr" value="22050"><span>22k</span></label><label><input type="radio" name="xsr" value="16000"><span>16k</span></label><label><input type="radio" name="xsr" value="8000"><span>8k</span></label></div></div>
-      <p class="hint">Mono is what phone systems expect. Use 8k WAV if your phone system asks for telephone-quality files. Every export gets a clean-up pass: click-free edges, rumble filter, peak limiter, anti-alias filter and dither.</p>
+        <div class="seg" role="radiogroup" aria-label="Sample rate"><label><input type="radio" name="xsr" value="16000" checked><span>16k ★</span></label><label><input type="radio" name="xsr" value="8000"><span>8k</span></label><label><input type="radio" name="xsr" value="22050"><span>22k</span></label><label><input type="radio" name="xsr" value="44100"><span>44.1k</span></label></div></div>
+      <p class="hint">These settings drive “Export as…”. ★ 16k WAV mono is the best quality most phone systems accept, and it’s what One-Click Export uses. Pick 8k only if the system requires it. Every export gets a clean-up pass: click-free edges, rumble filter, peak limiter, anti-alias filter and dither.</p>
     </div>
   </section>
 
@@ -294,6 +327,16 @@ input[type=range]{width:100%;accent-color:var(--blue-600);height:28px}
   </section>
 </main>
 <div class="toast" id="toast" hidden></div>
+<div class="modal" id="presetModal" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="presetTitle">
+    <div class="panel-h"><h3 id="presetTitle">Saved settings</h3><button class="btn" id="presetClose">Close</button></div>
+    <div class="panel-b">
+      <div class="save-row"><input id="presetName" aria-label="Name for these settings" placeholder="Name, e.g. Tropicoast main line"><button class="btn primary" id="presetSave">Save current</button></div>
+      <p class="hint">Saved on this device and kept through app updates. Settings save automatically each time you export or save a project.</p>
+      <ul class="presets" id="presetList"></ul>
+    </div>
+  </div>
+</div>
 <div class="sheet" id="sheet" role="dialog" aria-label="Save file" hidden>
   <h3>Your file is ready</h3>
   <div class="meta" id="sheetMeta"></div>
@@ -371,7 +414,7 @@ function startDrag(e,kind,from,li,ul){
 function del(kind){const a=S[kind];if(!a.length)return;stopPreview();a.splice(S.sel[kind],1);S.sel[kind]=Math.max(0,Math.min(S.sel[kind],a.length-1));renderList(kind)}
 function setPlayBtn(btn,on){btn.querySelector('span').textContent=on?'Stop':(btn.id==='pPlay'?'Play Project':'Play');btn.querySelector('svg').innerHTML=on?'<rect x="6" y="6" width="12" height="12" rx="2"/>':'<path d="M8 5v14l11-7z"/>'}
 function stopPreview(){if(preview){try{preview.src.stop()}catch(e){}setPlayBtn(preview.btn,false);preview=null}
-  if(projPlay){try{projPlay.src.stop()}catch(e){}setPlayBtn($('pPlay'),false);cancelAnimationFrame(projPlay.raf);projPlay=null;$('hero').classList.remove('playing');$('pbar').style.width='0';draw()}}
+  if(projPlay){try{projPlay.src.stop()}catch(e){}setPlayBtn($('pPlay'),false);cancelAnimationFrame(projPlay.raf);projPlay=null;countdownOff();$('hero').classList.remove('playing');$('pbar').style.width='0';draw()}}
 function playBuf(buf,btn){const c=ac();const src=c.createBufferSource();src.buffer=buf;src.connect(out);src.start();setPlayBtn(btn,true);return src}
 function previewTrack(kind,btn){const was=preview&&preview.btn===btn;stopPreview();if(was)return;const t=S[kind][S.sel[kind]];if(!t)return toast('Add a file first.');
   const src=playBuf(t.buf,btn);preview={src,btn};src.onended=()=>{if(preview&&preview.src===src)stopPreview()}}
@@ -447,7 +490,7 @@ async function playProject(){
   if(projPlay){stopPreview();return}stopPreview();const P=plan();if(!P.total)return toast('Add music or messages first.');
   status('Mixing…');ac();const buf=await render(P);const btn=$('pPlay');const src=playBuf(buf,btn);const t0=AC.currentTime;
   projPlay={src};$('hero').classList.add('playing');status('Playing '+fmt(P.total)+' program.');
-  const tick=()=>{if(!projPlay)return;const t=AC.currentTime-t0;draw(t);$('pbar').style.width=Math.min(100,t/P.total*100)+'%';projPlay.raf=requestAnimationFrame(tick)};tick();
+  const tick=()=>{if(!projPlay)return;const t=AC.currentTime-t0;draw(t);countdown(P,t);$('pbar').style.width=Math.min(100,t/P.total*100)+'%';projPlay.raf=requestAnimationFrame(tick)};tick();
   src.onended=()=>{if(projPlay&&projPlay.src===src){stopPreview();status('Playback finished.')}}
 }
 
@@ -556,21 +599,23 @@ async function deliver(filename,bytes,target){
 const safeName=s=>(s.trim()||'hold-program').replace(/[^\w\- ]+/g,'').replace(/\s+/g,'-').slice(0,60);
 
 function xopts(){const v=n=>document.querySelector('input[name='+n+']:checked').value;return{fmt:v('xfmt'),ch:+v('xch'),rate:+v('xsr')}}
-function syncFmt(){const o=xopts();$('pExportLbl').textContent='Export '+o.fmt.toUpperCase();
+const QUICK={fmt:'wav',ch:1,rate:16000};
+function fmtLabel(o){return o.fmt.toUpperCase()+' · '+(o.rate===44100?'44.1':o.rate===22050?'22':o.rate/1000)+'k · '+(o.ch===1?'mono':'stereo')}
+function syncFmt(){const o=xopts();$('pExportLbl').textContent='Export as… ('+fmtLabel(o)+')';
   $('fmtOut').textContent=(o.ch===1?'mono':'stereo')+' · '+(o.rate/1000)+' kHz'+(o.fmt==='mp3'?' · '+mp3Kbps(o.rate,o.ch)+' kbps':' · 16-bit');
-  try{localStorage.setItem('moh-fmt',JSON.stringify(o))}catch(e){}}
-async function exportMp3(){
+  try{localStorage.setItem('moh-fmt2',JSON.stringify(o))}catch(e){}}
+async function exportAudio(o,btn){
   const P=plan();if(!P.total)return toast('Add music or messages first.');
-  const o=xopts(),name=safeName($('pname').value)+'.'+o.fmt,btn=$('pExport');
+  const name=safeName($('pname').value)+'.'+o.fmt;
   let info;try{info=tagInfo($('pname').value.trim())}catch(e){return toast(e.message)}
   const target=await pickTarget(name);if(target==='cancel')return status('Export cancelled.');
   btn.disabled=true;
   try{status('Mixing…');const buf=await cleanOut(await render(P),o.rate,o.ch);let bytes;
-    if(o.fmt==='wav')bytes=new Uint8Array(wav(buf));
+    if(o.fmt==='wav')bytes=wavInfo(new Uint8Array(wav(buf)),info);
     else{bytes=await encodeMp3(buf);if(info.code||info.stamp||info.title)bytes=cat([id3(info),bytes])}
     $('pbar').style.width='100%';
     status(o.fmt.toUpperCase()+' ready · '+fmt(P.total)+' · '+(o.ch===1?'mono':'stereo')+' '+(o.rate/1000)+' kHz · '+(bytes.length/1048576).toFixed(1)+' MB');
-    await deliver(name,bytes,target)}
+    rememberSettings();await deliver(name,bytes,target)}
   catch(e){status(e.message);toast(e.message)}finally{btn.disabled=false;setTimeout(()=>{if(!projPlay)$('pbar').style.width='0'},1500)}
 }
 
@@ -585,7 +630,7 @@ async function saveProject(){
   status('Packing project…');await yieldUI();const st=settings();
   const pack=t=>{const src=t.src||wav(t.buf);return{name:t.name,demo:!!t.demo,mime:t.src?t.mime:'audio/wav',data:b64(src)}};
   const json=JSON.stringify({app:'MOH Mixer',version:1,name:$('pname').value,settings:{...st,volume:+$('vol').value},music:S.music.map(pack),messages:S.msgs.map(pack)});
-  await deliver(safeName($('pname').value)+'.moh.json',new TextEncoder().encode(json),target);status('Project saved with all audio inside.');
+  rememberSettings();await deliver(safeName($('pname').value)+'.moh.json',new TextEncoder().encode(json),target);status('Project saved with all audio inside.');
 }
 async function openProject(f){
   try{stopPreview();const j=JSON.parse(await f.text());if(j.app!=='MOH Mixer')throw new Error('That file isn’t a MOH Mixer project.');
@@ -599,6 +644,56 @@ async function openProject(f){
 }
 function newProject(){stopPreview();S.music=[];S.msgs=[];S.sel={music:0,msgs:0};$('pname').value='Untitled hold program';renderList('music');renderList('msgs');status('New project. Add music and messages to start.')}
 
+// Optional LIST/INFO chunk after the audio data (strict 44-byte-header readers still play the file).
+function wavInfo(bytes,info){
+  const comm=[info.code&&('Dealer code: '+info.code),info.stamp&&('Exported: '+info.stamp)].filter(Boolean).join(' | ');
+  if(!comm)return bytes;
+  const sub=(id,txt)=>{let d=latin(txt+'\0');if(d.length%2)d=cat([d,new Uint8Array(1)]);const h=new Uint8Array(8);h.set(latin(id));new DataView(h.buffer).setUint32(4,d.length,true);return cat([h,d])};
+  const body=cat([latin('INFO'),sub('INAM',info.title||'MOH program'),sub('ICMT',comm),info.stamp?sub('ICRD',info.stamp):new Uint8Array(0),sub('ISFT','MOH Mixer')]);
+  const lh=new Uint8Array(8);lh.set(latin('LIST'));new DataView(lh.buffer).setUint32(4,body.length,true);
+  const out=cat([bytes,lh,body]);new DataView(out.buffer).setUint32(4,out.length-8,true);return out}
+
+/* ---------- saved settings (device storage; survives app updates) ---------- */
+const PKEY='moh-saved-settings-v1';
+function loadPresets(){try{const a=JSON.parse(localStorage.getItem(PKEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
+function storePresets(a){try{localStorage.setItem(PKEY,JSON.stringify(a.slice(0,60)));if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});return true}catch(e){toast('Couldn’t save settings on this device.');return false}}
+function currentSettings(name){const o=xopts();return{name:(name||$('pname').value).trim()||'Untitled hold program',iv:num('ivM',59)*60+num('ivS',59),duck:+$('duck').value,loopFade:$('loopFade').checked,volume:+$('vol').value,
+  fmt:o.fmt,ch:o.ch,rate:o.rate,addCode:$('addCode').checked,code:$('codeVal').value.trim(),addStamp:$('addStamp').checked,savedAt:Date.now()}}
+function upsertPreset(p){const a=loadPresets().filter(x=>x.name.toLowerCase()!==p.name.toLowerCase());a.unshift(p);storePresets(a);renderPresets()}
+function rememberSettings(){upsertPreset(currentSettings())}
+function applyPreset(p){
+  $('pname').value=p.name;$('ivM').value=Math.floor(p.iv/60);$('ivS').value=p.iv%60;$('duck').value=p.duck;$('loopFade').checked=!!p.loopFade;$('vol').value=p.volume??90;
+  [['xfmt',p.fmt],['xch',p.ch],['xsr',p.rate]].forEach(([n,v])=>{const el=document.querySelector('input[name='+n+'][value="'+v+'"]');if(el)el.checked=true});
+  $('addCode').checked=!!p.addCode;$('codeVal').value=p.code||'';$('codeVal').hidden=!p.addCode;$('addStamp').checked=!!p.addStamp;
+  syncOuts();syncFmt();update();status('Loaded settings “'+p.name+'”.');toast('Settings loaded: '+p.name)}
+function presetMeta(p){const d=new Date(p.savedAt);return 'Interval '+fmt(p.iv)+' · duck '+p.duck+'% · '+fmtLabel(p)+' · '+d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}
+function renderPresets(){
+  const a=loadPresets(),ul=$('presetList');$('presetCount').textContent=a.length;ul.innerHTML='';
+  if(!a.length){const li=document.createElement('li');li.className='empty-p';li.textContent='No saved settings yet. Tap “Save current”, or export a project and its settings are saved here automatically.';ul.appendChild(li);return}
+  a.forEach(p=>{const li=document.createElement('li');li.className='preset'+(p.name===$('pname').value.trim()?' cur':'');
+    li.innerHTML='<div style="min-width:0"><div class="pn"></div><div class="pm"></div></div><div class="pa"><button class="btn primary">Use</button><button class="btn ghost-danger" aria-label="Delete">Delete</button></div>';
+    li.querySelector('.pn').textContent=p.name;li.querySelector('.pm').textContent=presetMeta(p);
+    const [use,delb]=li.querySelectorAll('button');
+    use.onclick=()=>{applyPreset(p);closePresets()};
+    delb.onclick=()=>{if(delb.dataset.sure){storePresets(loadPresets().filter(x=>x.name!==p.name));renderPresets()}else{delb.dataset.sure='1';delb.textContent='Confirm';setTimeout(()=>{if(delb.isConnected){delb.textContent='Delete';delete delb.dataset.sure}},3000)}};
+    ul.appendChild(li)})}
+let presetReturn=null;
+function openPresets(){presetReturn=document.activeElement;renderPresets();$('presetName').value=$('pname').value;$('presetModal').hidden=false;$('presetClose').focus()}
+function closePresets(){$('presetModal').hidden=true;if(presetReturn&&presetReturn.focus)presetReturn.focus()}
+
+/* ---------- live interval countdown during playback ---------- */
+let cdLast='';
+function countdown(P,t){
+  let label,val,msg=false;const ev=P.events;
+  const cur=ev.findIndex(e=>t>=e.start&&t<e.start+e.dur);
+  if(cur>=0){msg=true;label='Message '+(cur+1)+' playing';val=fmt(ev[cur].start+ev[cur].dur-t)}
+  else{const next=ev.find(e=>e.start>t);const end=next?next.start:P.total;const r=Math.max(0,Math.ceil(end-t-1e-3));
+    label=next?'Next message in':(ev.length?'Program ends in':'Music');val=r>=60?fmt(r):String(r)}
+  const key=label+val;if(key===cdLast)return;cdLast=key;
+  $('ivBox').classList.add('live');$('ivBox').classList.toggle('msg',msg);$('ivLbl').textContent=label;$('ivCd').textContent=val;$('ivCd').hidden=false;$('ivInputs').hidden=true;
+  $('cdChip').hidden=false;$('cdChipLbl').textContent=label;$('cdChipVal').textContent=msg?val:val+(val.includes(':')?'':'s')}
+function countdownOff(){cdLast='';$('ivBox').classList.remove('live','msg');$('ivLbl').textContent='Msg interval';$('ivCd').hidden=true;$('ivInputs').hidden=false;$('cdChip').hidden=true}
+
 /* ---------- wiring ---------- */
 function syncOuts(){$('volOut').textContent=$('vol').value+'%';$('duckOut').textContent=$('duck').value+'%';applyVol()}
 $('musicAdd').onclick=()=>$('musicFile').click();$('msgAdd').onclick=()=>$('msgFile').click();
@@ -607,9 +702,15 @@ $('msgFile').onchange=e=>{addFiles('msgs',[...e.target.files]);e.target.value=''
 $('musicDel').onclick=()=>del('music');$('msgDel').onclick=()=>del('msgs');
 $('musicPlay').onclick=e=>previewTrack('music',e.currentTarget);$('msgPlay').onclick=e=>previewTrack('msgs',e.currentTarget);
 document.querySelectorAll('input[name=xfmt],input[name=xch],input[name=xsr]').forEach(r=>r.addEventListener('change',syncFmt));
-try{const f=JSON.parse(localStorage.getItem('moh-fmt')||'null');if(f){[['xfmt',f.fmt],['xch',f.ch],['xsr',f.rate]].forEach(([n,v])=>{const el=document.querySelector('input[name='+n+'][value="'+v+'"]');if(el)el.checked=true})}}catch(e){}
+try{const f=JSON.parse(localStorage.getItem('moh-fmt2')||'null');if(f){[['xfmt',f.fmt],['xch',f.ch],['xsr',f.rate]].forEach(([n,v])=>{const el=document.querySelector('input[name='+n+'][value="'+v+'"]');if(el)el.checked=true})}}catch(e){}
 syncFmt();
-$('pPlay').onclick=playProject;$('pExport').onclick=exportMp3;$('pSave').onclick=saveProject;$('pNew').onclick=newProject;
+$('pPlay').onclick=playProject;$('pExport').onclick=e=>exportAudio(xopts(),e.currentTarget);$('pQuick').onclick=e=>exportAudio(QUICK,e.currentTarget);
+$('presetsBtn').onclick=openPresets;$('presetClose').onclick=closePresets;
+$('presetModal').addEventListener('click',e=>{if(e.target===$('presetModal'))closePresets()});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('presetModal').hidden)closePresets()});
+$('presetSave').onclick=()=>{const n=$('presetName').value.trim()||$('pname').value.trim();upsertPreset(currentSettings(n));toast('Saved settings: '+(n||'Untitled hold program'))};
+$('presetName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('presetSave').click()}});
+renderPresets();$('pSave').onclick=saveProject;$('pNew').onclick=newProject;
 $('pOpen').onclick=()=>$('projFile').click();$('projFile').onchange=e=>{if(e.target.files[0])openProject(e.target.files[0]);e.target.value=''};
 $('addCode').onchange=()=>{$('codeVal').hidden=!$('addCode').checked;if($('addCode').checked)$('codeVal').focus()};
 ['vol','mute','duck'].forEach(id=>$(id).addEventListener('input',()=>{syncOuts();update()}));
